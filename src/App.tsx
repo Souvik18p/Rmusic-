@@ -30,6 +30,9 @@ import { PlaylistsSidebar } from "./components/PlaylistsSidebar";
 // Default tracks to fill in on startup for a beautiful rich UI
 const SUGGESTED_QUERIES = ["Chill Lofi Beats", "Synthwave Retro", "Acoustic Pop Acoustic Coffee", "Ambient Sleep"];
 
+// API endpoint - Update this to your deployed backend URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || "https://rmusic-production.up.railway.app";
+
 export default function App() {
   // Auth state
   const [user, setUser] = useState<CustomUser | null>(null);
@@ -174,7 +177,7 @@ export default function App() {
 
   try {
     const res = await fetch(
-      `http://localhost:3000/api/search?q=${encodeURIComponent(query)}`
+      `${API_BASE_URL}/api/search?q=${encodeURIComponent(query)}`
     );
 
     if (!res.ok) {
@@ -195,7 +198,7 @@ export default function App() {
     console.error("Search failed:", err);
 
     alert(
-      "Search failed. Make sure backend server is running on port 3000."
+      "Search failed. Make sure backend server is running and accessible."
     );
   } finally {
     setIsSearching(false);
@@ -627,7 +630,7 @@ export default function App() {
             </div>
           ) : (
             // Playlist Header Detailed View
-            <div className="bg-gradient-to-r from-emerald-950/20 to-slate-950 border border-slate-800/60 rounded-2xl p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="bg-gradient-to-r from-emerald-950/20 to-slate-950 border border-slate-800/60 rounded-2xl p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-center gap-5">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-emerald-600 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-500/20">
                   <FolderOpen className="w-8 h-8" />
@@ -654,7 +657,7 @@ export default function App() {
                 {authToken && selectedPlaylist && selectedPlaylist.songs.length > 0 && (
                   <button
                     onClick={() => handleSyncPlaylistToDrive(selectedPlaylist.id)}
-                    className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md shadow-emerald-500/10"
+                    className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
                   >
                     <FolderOpen className="w-4 h-4" /> Export Playlist to Drive Subfolder
                   </button>
