@@ -1,0 +1,10 @@
+{
+  "name": "r music",
+  "description": "Search and play tracks from YouTube, import and organize your playlists, and save audio files directly to your Google Drive in specialized folders.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
