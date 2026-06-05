@@ -164,25 +164,43 @@ export default function App() {
   };
 
   // Actions: YouTube feeds search
-  const triggerSearch = async (query: string, autoPlayFirst = false) => {
-    if (!query.trim()) return;
-    setIsSearching(true);
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-      if (!res.ok) throw new Error("Search endpoint responded with error");
-      const data = await res.json();
-      const results = data.results || [];
-      setSearchResults(results);
-      if (autoPlayFirst && results.length > 0) {
-        setCurrentTrack(results[0]);
-        setIsPlaying(true);
-      }
-    } catch (err) {
-      console.error("Search failed:", err);
-    } finally {
-      setIsSearching(false);
+  const triggerSearch = async (
+  query: string,
+  autoPlayFirst = false
+) => {
+  if (!query.trim()) return;
+
+  setIsSearching(true);
+
+  try {
+    const res = await fetch(
+      `http://localhost:3000/api/search?q=${encodeURIComponent(query)}`
+    );
+
+    if (!res.ok) {
+      throw new Error("Search endpoint responded with error");
     }
-  };
+
+    const data = await res.json();
+
+    const results = data.results || [];
+
+    setSearchResults(results);
+
+    if (autoPlayFirst && results.length > 0) {
+      setCurrentTrack(results[0]);
+      setIsPlaying(true);
+    }
+  } catch (err) {
+    console.error("Search failed:", err);
+
+    alert(
+      "Search failed. Make sure backend server is running on port 3000."
+    );
+  } finally {
+    setIsSearching(false);
+  }
+};
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
