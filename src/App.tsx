@@ -27,11 +27,11 @@ import { TrackItem } from "./components/TrackItem";
 import { MiniPlayer } from "./components/MiniPlayer";
 import { PlaylistsSidebar } from "./components/PlaylistsSidebar";
 
+// YouTube search
+import * as yt from "yt-search";
+
 // Default tracks to fill in on startup for a beautiful rich UI
 const SUGGESTED_QUERIES = ["Chill Lofi Beats", "Synthwave Retro", "Acoustic Pop Acoustic Coffee", "Ambient Sleep"];
-
-// API endpoint - Update this to your deployed backend URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || "https://rmusic-production.up.railway.app";
 
 export default function App() {
   // Auth state
@@ -166,44 +166,47 @@ export default function App() {
     }
   };
 
-  // Actions: YouTube feeds search
+  // Actions: YouTube feeds search (Browser-based using yt-search)
   const triggerSearch = async (
-  query: string,
-  autoPlayFirst = false
-) => {
-  if (!query.trim()) return;
+    query: string,
+    autoPlayFirst = false
+  ) => {
+    if (!query.trim()) return;
 
-  setIsSearching(true);
+    setIsSearching(true);
 
-  try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/search?q=${encodeURIComponent(query)}`
-    );
+    try {
+      console.log("Searching YouTube for:", query);
+      const results = await yt(query);
+      
+      if (!results || !results.videos) {
+        throw new Error("No results found");
+      }
 
-    if (!res.ok) {
-      throw new Error("Search endpoint responded with error");
+      // Convert YouTube results to Track format
+      const tracks: Track[] = results.videos.slice(0, 20).map((video: any) => ({
+        id: video.videoId,
+        title: video.title,
+        uploader: video.author?.name || "Unknown Artist",
+        duration: video.duration?.seconds || 0,
+        url: video.url,
+        thumbnail: video.thumbnail,
+      }));
+
+      setSearchResults(tracks);
+
+      if (autoPlayFirst && tracks.length > 0) {
+        setCurrentTrack(tracks[0]);
+        setIsPlaying(true);
+      }
+    } catch (err) {
+      console.error("Search failed:", err);
+      alert("Search failed. Please try again.");
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
     }
-
-    const data = await res.json();
-
-    const results = data.results || [];
-
-    setSearchResults(results);
-
-    if (autoPlayFirst && results.length > 0) {
-      setCurrentTrack(results[0]);
-      setIsPlaying(true);
-    }
-  } catch (err) {
-    console.error("Search failed:", err);
-
-    alert(
-      "Search failed. Make sure backend server is running and accessible."
-    );
-  } finally {
-    setIsSearching(false);
-  }
-};
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
