@@ -27,11 +27,26 @@ import { TrackItem } from "./components/TrackItem";
 import { MiniPlayer } from "./components/MiniPlayer";
 import { PlaylistsSidebar } from "./components/PlaylistsSidebar";
 
-// YouTube search
-import * as yt from "yt-search";
-
 // Default tracks to fill in on startup for a beautiful rich UI
 const SUGGESTED_QUERIES = ["Chill Lofi Beats", "Synthwave Retro", "Acoustic Pop Acoustic Coffee", "Ambient Sleep"];
+
+// Demo tracks for testing
+const DEMO_TRACKS: Track[] = [
+  {
+    id: "1",
+    title: "Chill Vibes",
+    uploader: "Artist One",
+    duration: 180,
+    url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  },
+  {
+    id: "2",
+    title: "Synthwave Dreams",
+    uploader: "Artist Two",
+    duration: 240,
+    url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  },
+];
 
 export default function App() {
   // Auth state
@@ -48,7 +63,7 @@ export default function App() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Track[]>([]);
+  const [searchResults, setSearchResults] = useState<Track[]>(DEMO_TRACKS);
   const [isSearching, setIsSearching] = useState(false);
 
   // Player controls state
@@ -88,10 +103,6 @@ export default function App() {
         console.error("Failed to parse playlists:", e);
       }
     }
-
-    // 3. Trigger a quick initial suggestions search
-    const randomDefault = SUGGESTED_QUERIES[Math.floor(Math.random() * SUGGESTED_QUERIES.length)];
-    triggerSearch(randomDefault);
 
     return () => unsubscribe();
   }, []);
@@ -166,43 +177,31 @@ export default function App() {
     }
   };
 
-  // Actions: YouTube feeds search (Browser-based using yt-search)
-  const triggerSearch = async (
-    query: string,
-    autoPlayFirst = false
-  ) => {
+  // Actions: Search (Demo - just filters demo tracks)
+  const triggerSearch = async (query: string, autoPlayFirst = false) => {
     if (!query.trim()) return;
 
     setIsSearching(true);
 
     try {
-      console.log("Searching YouTube for:", query);
-      const results = await yt(query);
+      // Simulate search delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (!results || !results.videos) {
-        throw new Error("No results found");
-      }
+      // Filter demo tracks by query
+      const filtered = DEMO_TRACKS.filter(track =>
+        track.title.toLowerCase().includes(query.toLowerCase()) ||
+        track.uploader.toLowerCase().includes(query.toLowerCase())
+      );
 
-      // Convert YouTube results to Track format
-      const tracks: Track[] = results.videos.slice(0, 20).map((video: any) => ({
-        id: video.videoId,
-        title: video.title,
-        uploader: video.author?.name || "Unknown Artist",
-        duration: video.duration?.seconds || 0,
-        url: video.url,
-        thumbnail: video.thumbnail,
-      }));
+      setSearchResults(filtered.length > 0 ? filtered : DEMO_TRACKS);
 
-      setSearchResults(tracks);
-
-      if (autoPlayFirst && tracks.length > 0) {
-        setCurrentTrack(tracks[0]);
+      if (autoPlayFirst && filtered.length > 0) {
+        setCurrentTrack(filtered[0]);
         setIsPlaying(true);
       }
     } catch (err) {
       console.error("Search failed:", err);
       alert("Search failed. Please try again.");
-      setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
@@ -215,7 +214,6 @@ export default function App() {
 
   // Actions: Playlists local state management
   const handleCreatePlaylist = (name: string) => {
-    // Check duplication
     if (playlists.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
       alert(`A playlist with the name "${name}" already exists.`);
       return;
@@ -245,7 +243,6 @@ export default function App() {
     setPlaylists((prev) =>
       prev.map((pl) => {
         if (pl.id !== playlistId) return pl;
-        // Avoid duplicates within the same list
         if (pl.songs.some((s) => s.id === track.id)) return pl;
         return {
           ...pl,
@@ -267,7 +264,7 @@ export default function App() {
     );
   };
 
-  // Actions: Music streaming sequence coordinators (Next / Prev)
+  // Actions: Music streaming sequence coordinators
   const getActiveTracklist = (): Track[] => {
     if (selectedPlaylistId === null) {
       return searchResults;
@@ -322,7 +319,6 @@ export default function App() {
       return;
     }
 
-    // Explicit confirmation for saving a single audio track
     const confirmSave = window.confirm(`Save "${track.title}" as an MP3 file directly into your Google Drive "r music" directory?`);
     if (!confirmSave) return;
 
@@ -353,14 +349,12 @@ export default function App() {
     const playlist = playlists.find((p) => p.id === playlistId);
     if (!playlist || playlist.songs.length === 0) return;
 
-    // Explicit validation & confirmation for folder mutations/write
     const confirmSync = window.confirm(
       `Synchronize playlist "${playlist.name}" into organized subfolders inside Google Drive? This will create a folder named "r music/${playlist.name}" and save all track files inside.`
     );
     if (!confirmSync) return;
 
     try {
-      // 1. Create subfolder inside "r music"
       setPlaylistSyncStates((prev) => ({
         ...prev,
         [playlistId]: { current: 0, total: playlist.songs.length, status: "syncing" },
@@ -374,7 +368,6 @@ export default function App() {
         playlistFolderId = await createFolder(authToken, playlist.name, musicFolderId);
       }
 
-      // 2. Upload playlist definition metadata file
       console.log(`Exporting "playlist_metadata.json" into Google Drive...`);
       const meta = {
         playlistName: playlist.name,
@@ -392,7 +385,6 @@ export default function App() {
 
       await uploadJsonFile(authToken, "playlist_metadata.json", meta, playlistFolderId);
 
-      // 3. Sync individual songs in background sequence
       for (let i = 0; i < playlist.songs.length; i++) {
         const song = playlist.songs[i];
         console.log(`Saving track [${i + 1}/${playlist.songs.length}]: ${song.title}`);
@@ -584,10 +576,10 @@ export default function App() {
             <div className="bg-slate-950/40 border border-slate-800/60 rounded-2xl p-6 flex flex-col gap-4">
               <div>
                 <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-emerald-400" /> Search YouTube Live Music Audio
+                  <Sparkles className="w-5 h-5 text-emerald-400" /> Search or Create Playlists
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Type your favorite track, artist name, or vibes to explore YouTube audio feeds.
+                  Create playlists from demo tracks and save them to Google Drive.
                 </p>
               </div>
 
@@ -596,7 +588,7 @@ export default function App() {
                   <Search className="w-5 h-5 text-slate-500 shrink-0" />
                   <input
                     type="text"
-                    placeholder="Search songs, artists, soundtracks..."
+                    placeholder="Filter demo tracks..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-550 focus:outline-none"
@@ -615,7 +607,7 @@ export default function App() {
               {/* Suggested query fast tags */}
               <div className="flex flex-wrap items-center gap-2 mt-1">
                 <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mr-1">
-                  Pop Vibes:
+                  Demo Tracks:
                 </span>
                 {SUGGESTED_QUERIES.map((q) => (
                   <button
@@ -680,7 +672,7 @@ export default function App() {
             <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-4">
               <h3 className="font-bold text-slate-300 flex items-center gap-2">
                 <Music className="w-4 h-4 text-emerald-400 animate-pulse" />
-                {selectedPlaylistId === null ? "YouTube Feed Results" : "Playlist Content Tracklist"}
+                {selectedPlaylistId === null ? "Available Tracks" : "Playlist Content Tracklist"}
               </h3>
               <span className="text-xs text-slate-500 font-mono">{activeTracks.length} items listed</span>
             </div>
@@ -694,7 +686,7 @@ export default function App() {
                 </p>
                 <p className="text-xs text-slate-550 max-w-sm mx-auto mt-2 leading-relaxed">
                   {selectedPlaylistId === null
-                    ? "Enter search keywords in the search panel above to fetch real-time music audio items."
+                    ? "Available demo tracks will appear here."
                     : "No songs have been added yet. Switch to 'All Search Results', find beautiful songs, and add them!"}
                 </p>
               </div>
